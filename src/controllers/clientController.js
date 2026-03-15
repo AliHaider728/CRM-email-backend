@@ -1,17 +1,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // controllers/clientController.js
-// Handles all CRUD operations for PCN / Surgery clients.
-// Routes: GET /api/clients  |  POST /api/clients  |  GET /api/clients/:clientId
 // ─────────────────────────────────────────────────────────────────────────────
 
-import Client from '../models/Client.js';
+import Client        from '../models/Client.js';
+import Email         from '../models/Email.js';
+import TimelineEntry from '../models/TimelineEntry.js';
+import Notification  from '../models/Notification.js';
+import TeamMember    from '../models/TeamMember.js';
+import EmailEngagement from '../models/EmailEngagement.js';
 
 // ─── GET /api/clients ─────────────────────────────────────────────────────────
-// Returns a paginated list of clients.
-// Query params:
-//   search          – filters by name, pcnNumber, surgeryName, or email (case-insensitive)
-//   accountManagerId – filters by assigned account manager
-//   page, limit     – pagination (defaults: page=1, limit=20)
 export async function listClients(req, res, next) {
   try {
     const { search, accountManagerId } = req.query;
@@ -21,7 +19,6 @@ export async function listClients(req, res, next) {
 
     const filter = {};
 
-    // Build a case-insensitive OR search across key fields
     if (search) {
       filter.$or = [
         { name:        { $regex: search, $options: 'i' } },
@@ -33,7 +30,6 @@ export async function listClients(req, res, next) {
 
     if (accountManagerId) filter.accountManagerId = accountManagerId;
 
-    // Run count and find in parallel for performance
     const [clients, total] = await Promise.all([
       Client.find(filter).skip(skip).limit(limit).sort({ lastContactedAt: -1 }),
       Client.countDocuments(filter),
@@ -44,13 +40,10 @@ export async function listClients(req, res, next) {
 }
 
 // ─── POST /api/clients ────────────────────────────────────────────────────────
-// Creates a new client (PCN / Surgery).
-// Body: { name*, pcnNumber*, surgeryName, email, phone }
 export async function createClient(req, res, next) {
   try {
     const { name, pcnNumber, surgeryName, email, phone } = req.body;
 
-    // name and pcnNumber are required
     if (!name || !pcnNumber)
       return res.status(400).json({
         error: 'validation_error',
@@ -68,7 +61,6 @@ export async function createClient(req, res, next) {
 }
 
 // ─── GET /api/clients/:clientId ───────────────────────────────────────────────
-// Returns a single client by MongoDB _id.
 export async function getClient(req, res, next) {
   try {
     const client = await Client.findById(req.params.clientId);
@@ -79,37 +71,32 @@ export async function getClient(req, res, next) {
     res.json(client);
   } catch (err) { next(err); }
 }
- 
+
 // ─── DELETE /api/clients/:id ──────────────────────────────────────────────────
-// Deletes a client and all associated data (emails, timeline, notifications)
 export async function deleteClient(req, res, next) {
   try {
     const { id } = req.params;
- 
+
     const client = await Client.findById(id);
     if (!client)
-      return res.status(404).json({ error: "not_found", message: "Client not found" });
- 
+      return res.status(404).json({ error: 'not_found', message: 'Client not found' });
+
     // Delete all associated records in parallel
     await Promise.all([
       Email.deleteMany({ clientId: id }),
       TimelineEntry.deleteMany({ clientId: id }),
       Notification.deleteMany({ clientId: id }),
-      // If you have EmailEngagement model:
-      // EmailEngagement.deleteMany({ clientId: id }),
+      EmailEngagement.deleteMany({ clientId: id }),
     ]);
- 
-    // Delete the client itself
+
     await Client.findByIdAndDelete(id);
- 
-    // Update team member client counts
+
     if (client.accountManagerId) {
       await TeamMember.findByIdAndUpdate(client.accountManagerId, {
         $inc: { clientCount: -1 },
       });
     }
- 
+
     res.json({ success: true, message: `Client "${client.name}" deleted successfully` });
   } catch (err) { next(err); }
 }
- 
