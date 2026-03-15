@@ -1,8 +1,5 @@
-const { Router } = require('express');
-const { triggerSync } = require('../controllers/outlookController');
-
+import { Router } from 'express';
+import { triggerSync } from '../controllers/outlookController.js';
 const router = Router();
-
 router.post('/sync', triggerSync);
-
-module.exports = router;
+export default router;

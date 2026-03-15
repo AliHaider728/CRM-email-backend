@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const teamMemberSchema = new mongoose.Schema(
   {
@@ -10,8 +10,9 @@ const teamMemberSchema = new mongoose.Schema(
     avatarInitials:   { type: String },
     emailCount:       { type: Number, default: 0 },
     clientCount:      { type: Number, default: 0 },
+    lastSyncAt:       { type: Date },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model('TeamMember', teamMemberSchema);
+export default mongoose.model('TeamMember', teamMemberSchema);

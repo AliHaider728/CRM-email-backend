@@ -1,9 +1,6 @@
-const { Router } = require('express');
-const { getTimeline, addNote } = require('../controllers/timelineController');
-
+import { Router } from 'express';
+import { getTimeline, addNote } from '../controllers/timelineController.js';
 const router = Router();
-
 router.get('/clients/:clientId/timeline', getTimeline);
 router.post('/notes',                     addNote);
-
-module.exports = router;
+export default router;

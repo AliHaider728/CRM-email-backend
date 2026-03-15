@@ -2,23 +2,18 @@
  * Global Express error handler.
  * Catches any error passed to next(err) and returns a JSON response.
  */
-function errorHandler(err, _req, res, _next) {
+export function errorHandler(err, _req, res, _next) {
   console.error('[Error]', err.message);
 
-  if (err.name === 'ValidationError') {
+  if (err.name === 'ValidationError')
     return res.status(400).json({ error: 'validation_error', message: err.message });
-  }
-  if (err.name === 'CastError') {
+  if (err.name === 'CastError')
     return res.status(400).json({ error: 'invalid_id', message: 'Invalid ID format' });
-  }
-  if (err.code === 11000) {
+  if (err.code === 11000)
     return res.status(409).json({ error: 'duplicate', message: 'Record already exists' });
-  }
 
   res.status(err.status || 500).json({
-    error: 'server_error',
+    error:   'server_error',
     message: err.message || 'Internal server error',
   });
 }
-
-module.exports = { errorHandler };

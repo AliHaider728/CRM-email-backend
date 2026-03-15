@@ -1,12 +1,13 @@
-require('dotenv').config();
-const mongoose   = require('mongoose');
-const Client     = require('./models/Client');
-const TeamMember = require('./models/TeamMember');
-const Email      = require('./models/Email');
-const TimelineEntry  = require('./models/TimelineEntry');
-const Notification   = require('./models/Notification');
+import  dotenv from 'dotenv';
+dotenv.config();
+import mongoose      from 'mongoose';
+import Client        from './models/Client.js';
+import TeamMember    from './models/TeamMember.js';
+import Email         from './models/Email.js';
+import TimelineEntry from './models/TimelineEntry.js';
+import Notification  from './models/Notification.js';
 
-const MONGODB_URI = process.env.MONGODB_URI ;
+const MONGODB_URI = process.env.MONGODB_URI;
 
 async function seed() {
   await mongoose.connect(MONGODB_URI);
@@ -20,7 +21,7 @@ async function seed() {
     Notification.deleteMany({}),
   ]);
 
-  // ─── Team Members ───────────────────────────────────────────────────────────
+  // ─── Team Members ────────────────────────────────────────────────────────────
   const [alice, bob, carol] = await TeamMember.insertMany([
     {
       name: 'Alice Johnson', email: 'alice@nhscrm.com',
@@ -42,7 +43,7 @@ async function seed() {
     },
   ]);
 
-  // ─── Clients ────────────────────────────────────────────────────────────────
+  // ─── Clients ─────────────────────────────────────────────────────────────────
   const [northLondon, meridian, eastMids] = await Client.insertMany([
     {
       name: 'North London PCN', pcnNumber: 'PCN-001',
@@ -76,12 +77,12 @@ async function seed() {
     },
   ]);
 
-  // ─── Emails ─────────────────────────────────────────────────────────────────
+  // ─── Emails ───────────────────────────────────────────────────────────────────
   const email1 = await Email.create({
     subject: 'Q1 Pharmacy Review — North London PCN',
     direction: 'outbound', fromEmail: alice.email, fromName: alice.name,
     toEmail: northLondon.email, toName: northLondon.name,
-    bodyPreview: 'Following up on last week\'s review meeting, please find the action plan attached.',
+    bodyPreview: "Following up on last week's review meeting, please find the action plan attached.",
     clientId: northLondon._id, accountManagerId: alice._id, accountManagerName: alice.name,
     openCount: 3, clickCount: 1, isRead: true, bccTracked: true, attachments: [],
     sentAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
@@ -117,7 +118,7 @@ async function seed() {
     sentAt: new Date(Date.now() - 17 * 60 * 60 * 1000),
   });
 
-  // ─── Timeline Entries ────────────────────────────────────────────────────────
+  // ─── Timeline Entries ─────────────────────────────────────────────────────────
   await TimelineEntry.insertMany([
     {
       type: 'email_sent', clientId: northLondon._id, emailId: email1._id,
@@ -160,7 +161,7 @@ async function seed() {
     },
   ]);
 
-  // ─── Notifications ───────────────────────────────────────────────────────────
+  // ─── Notifications ────────────────────────────────────────────────────────────
   await Notification.insertMany([
     {
       type: 'email_received', isRead: false,
@@ -187,11 +188,11 @@ async function seed() {
     },
   ]);
 
-  console.log('Seed complete! Sample NHS data loaded.');
+  console.log('✅ Seed complete! Sample NHS data loaded.');
   await mongoose.disconnect();
 }
 
-seed().catch(err => {
-  console.error('Seed failed:', err.message);
+seed().catch((err) => {
+  console.error('❌ Seed failed:', err.message);
   process.exit(1);
 });

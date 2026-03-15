@@ -1,8 +1,5 @@
-const { Router } = require('express');
-const { ingestBccEmail } = require('../controllers/bccController');
-
+import { Router } from 'express';
+import { ingestBccEmail } from '../controllers/bccController.js';
 const router = Router();
-
 router.post('/ingest', ingestBccEmail);
-
-module.exports = router;
+export default router;

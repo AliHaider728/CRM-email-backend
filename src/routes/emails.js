@@ -1,11 +1,8 @@
-const { Router } = require('express');
-const { listEmails, logEmail, getEmail, trackEmail } = require('../controllers/emailController');
-
+import { Router } from 'express';
+import { listEmails, logEmail, getEmail, trackEmail } from '../controllers/emailController.js';
 const router = Router();
-
-router.get('/',              listEmails);
-router.post('/',             logEmail);
-router.get('/:emailId',      getEmail);
+router.get('/',                listEmails);
+router.post('/',               logEmail);
+router.get('/:emailId',        getEmail);
 router.post('/:emailId/track', trackEmail);
-
-module.exports = router;
+export default router;

@@ -1,8 +1,5 @@
-const { Router } = require('express');
-const { getOverview } = require('../controllers/statsController');
-
+import { Router } from 'express';
+import { getOverview } from '../controllers/statsController.js';
 const router = Router();
-
 router.get('/overview', getOverview);
-
-module.exports = router;
+export default router;
