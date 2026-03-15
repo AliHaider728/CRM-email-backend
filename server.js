@@ -17,9 +17,9 @@ import { errorHandler } from "./src/middleware/errorHandler.js";
 
 const app = express();
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 // CORS
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:5174",
@@ -32,21 +32,35 @@ const ALLOWED_ORIGINS = [
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-      return cb(new Error(`CORS blocked for origin: ${origin}`));
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+        return cb(null, true);
+      }
+      return cb(new Error(`CORS blocked: ${origin}`));
     },
     credentials: true,
   })
 );
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 // Body Parser
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 app.use(express.json({ limit: "10mb" }));
 
-// ─────────────────────────────────────────────────────────
-// Health Route
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
+// Root Route
+// ─────────────────────────────────────────
+app.get("/", (req, res) => {
+  res.json({
+    name: "CRM Email API",
+    version: "1.0.0",
+    health: "/api/health",
+    docs: "/api",
+  });
+});
+
+// ─────────────────────────────────────────
+// Health Check
+// ─────────────────────────────────────────
 app.get("/api/health", (req, res) => {
   res.json({
     status: "API Running Successfully 🚀",
@@ -54,9 +68,9 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 // API Routes
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 app.use("/api/clients", clientRoutes);
 app.use("/api/emails", emailRoutes);
 app.use("/api/team", teamRoutes);
@@ -66,24 +80,25 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/bcc", bccRoutes);
 app.use("/api/outlook", outlookRoutes);
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 // 404 Handler
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({
     error: "not_found",
+    path: req.originalUrl,
     message: "Route not found",
   });
 });
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 // Error Middleware
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 app.use(errorHandler);
 
-// ─────────────────────────────────────────────────────────
-// MongoDB Connection (Serverless Optimized)
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
+// MongoDB Connection (Serverless optimized)
+// ─────────────────────────────────────────
 let cached = global.mongoose;
 
 if (!cached) {
@@ -104,25 +119,27 @@ async function connectDB() {
   return cached.conn;
 }
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 // Vercel Serverless Handler
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 export default async function handler(req, res) {
   await connectDB();
   return app(req, res);
 }
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 // Local Development Server
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 4000;
 
   connectDB()
     .then(() => {
       app.listen(PORT, () => {
+        console.log("──────────────────────────────────");
         console.log(`Server running → http://localhost:${PORT}`);
-        console.log(`Health check → http://localhost:${PORT}/api/health`);
+        console.log(`Health check  → http://localhost:${PORT}/api/health`);
+        console.log("──────────────────────────────────");
       });
     })
     .catch((err) => {
