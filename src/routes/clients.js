@@ -4,4 +4,5 @@ const router = Router();
 router.get('/',          listClients);
 router.post('/',         createClient);
 router.get('/:clientId', getClient);
+router.delete('/:id', deleteClient);
 export default router;

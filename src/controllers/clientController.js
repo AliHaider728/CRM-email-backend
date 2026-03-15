@@ -79,3 +79,37 @@ export async function getClient(req, res, next) {
     res.json(client);
   } catch (err) { next(err); }
 }
+ 
+// ─── DELETE /api/clients/:id ──────────────────────────────────────────────────
+// Deletes a client and all associated data (emails, timeline, notifications)
+export async function deleteClient(req, res, next) {
+  try {
+    const { id } = req.params;
+ 
+    const client = await Client.findById(id);
+    if (!client)
+      return res.status(404).json({ error: "not_found", message: "Client not found" });
+ 
+    // Delete all associated records in parallel
+    await Promise.all([
+      Email.deleteMany({ clientId: id }),
+      TimelineEntry.deleteMany({ clientId: id }),
+      Notification.deleteMany({ clientId: id }),
+      // If you have EmailEngagement model:
+      // EmailEngagement.deleteMany({ clientId: id }),
+    ]);
+ 
+    // Delete the client itself
+    await Client.findByIdAndDelete(id);
+ 
+    // Update team member client counts
+    if (client.accountManagerId) {
+      await TeamMember.findByIdAndUpdate(client.accountManagerId, {
+        $inc: { clientCount: -1 },
+      });
+    }
+ 
+    res.json({ success: true, message: `Client "${client.name}" deleted successfully` });
+  } catch (err) { next(err); }
+}
+ 
