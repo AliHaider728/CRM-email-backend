@@ -18,7 +18,7 @@ import { errorHandler }   from "./src/middleware/errorHandler.js";
 
 const app = express();
 
-// ─── CORS ─────────────────────────────────────────────────────────────────────
+// ─── CORS 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:5174",
@@ -38,20 +38,20 @@ app.use(
   })
 );
 
-// ─── Body Parser ──────────────────────────────────────────────────────────────
+// ─── Body Parser
 app.use(express.json({ limit: "10mb" }));
 
-// ─── Root ─────────────────────────────────────────────────────────────────────
+// ─── Root
 app.get("/", (req, res) => {
   res.json({ name: "CRM Email API", version: "1.1.0", health: "/api/health" });
 });
 
-// ─── Health ───────────────────────────────────────────────────────────────────
+// ─── Health─────
 app.get("/api/health", (req, res) => {
-  res.json({ status: "API Running Successfully 🚀", timestamp: new Date().toISOString() });
+  res.json({ status: "API Running Successfully ", timestamp: new Date().toISOString() });
 });
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
+// ─── Routes─────
 app.use("/api/clients",       clientRoutes);
 app.use("/api/emails",        emailRoutes);
 app.use("/api/team",          teamRoutes);
@@ -62,14 +62,14 @@ app.use("/api/bcc",           bccRoutes);
 app.use("/api/outlook",       outlookRoutes);
 app.use("/api/track",         trackingRoutes);    // ← NEW — pixel + link tracking
 
-// ─── 404 ──────────────────────────────────────────────────────────────────────
+// ─── 404─
 app.use((req, res) => {
   res.status(404).json({ error: "not_found", path: req.originalUrl });
 });
 
 app.use(errorHandler);
 
-// ─── MongoDB (serverless optimised) ──────────────────────────────────────────
+// ─── MongoDB (serverless optimised) 
 let cached = global.mongoose;
 if (!cached) cached = global.mongoose = { conn: null, promise: null };
 
@@ -82,13 +82,13 @@ async function connectDB() {
   return cached.conn;
 }
 
-// ─── Vercel handler ───────────────────────────────────────────────────────────
+// ─── Vercel handler ───
 export default async function handler(req, res) {
   await connectDB();
   return app(req, res);
 }
 
-// ─── Local dev ────────────────────────────────────────────────────────────────
+// ─── Local dev──
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 4000;
   connectDB()

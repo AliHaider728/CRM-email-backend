@@ -1,6 +1,6 @@
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // controllers/emailController.js
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 
 import Email            from '../models/Email.js';
 import EmailEngagement  from '../models/EmailEngagement.js';
@@ -9,7 +9,7 @@ import TeamMember       from '../models/TeamMember.js';
 import TimelineEntry    from '../models/TimelineEntry.js';
 import Notification     from '../models/Notification.js';
 
-// ─── Helper: parse device from User-Agent string ──────────────────────────────
+// ─── Helper: parse device from User-Agent string
 function parseDevice(ua = '') {
   if (!ua) return 'unknown';
   const s = ua.toLowerCase();
@@ -19,7 +19,7 @@ function parseDevice(ua = '') {
   return 'unknown';
 }
 
-// ─── Helper: parse OS from User-Agent ────────────────────────────────────────
+// ─── Helper: parse OS from User-Agent 
 function parseOS(ua = '') {
   if (!ua) return 'Unknown';
   if (ua.includes('iPhone') || ua.includes('iPad'))   return 'iOS';
@@ -30,7 +30,7 @@ function parseOS(ua = '') {
   return 'Unknown';
 }
 
-// ─── Helper: parse browser from User-Agent ───────────────────────────────────
+// ─── Helper: parse browser from User-Agent 
 function parseBrowser(ua = '') {
   if (!ua) return 'Unknown';
   if (ua.includes('Edg/'))    return 'Edge';
@@ -41,11 +41,11 @@ function parseBrowser(ua = '') {
   return 'Unknown';
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // GET /api/emails
 // Returns paginated list of emails with optional filters.
 // Query: clientId, accountManagerId, status, page, limit
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 export async function listEmails(req, res, next) {
   try {
     const { clientId, accountManagerId, status } = req.query;
@@ -71,13 +71,13 @@ export async function listEmails(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // POST /api/emails
 // Logs a new email (sent or received).
 // Body: { subject*, direction*, fromEmail, fromName, toEmail, toName,
 //         body, bodyPreview, clientId, accountManagerId, accountManagerName,
 //         bccTracked, syncMethod, outlookMessageId, sentAt, receivedAt }
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 export async function logEmail(req, res, next) {
   try {
     const {
@@ -150,10 +150,10 @@ export async function logEmail(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // GET /api/emails/:emailId
 // Returns single email with its full engagement detail.
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 export async function getEmail(req, res, next) {
   try {
     const email = await Email.findById(req.params.emailId);
@@ -174,11 +174,11 @@ export async function getEmail(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // GET /api/emails/:emailId/engagements
 // Returns full WHO-opened detail for a specific email.
 // Used by the frontend drawer to show "Opened by dr.smith@surgery.com on iPhone"
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 export async function getEmailEngagements(req, res, next) {
   try {
     const email = await Email.findById(req.params.emailId);
@@ -214,11 +214,11 @@ export async function getEmailEngagements(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // POST /api/emails/:emailId/track
 // Called from API — records open/click/download with WHO info.
 // Body: { eventType: 'open'|'click'|'download', openedByEmail?, linkUrl?, fileName? }
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 export async function trackEmail(req, res, next) {
   try {
     const { eventType, openedByEmail, openedByName, linkUrl, fileName, fileSize } = req.body;
@@ -315,11 +315,11 @@ export async function trackEmail(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // GET /api/track/open/:emailId/:recipientEmail
 // Tracking PIXEL endpoint — called when email is opened in email client.
 // Returns 1x1 transparent GIF. Logs the open event silently.
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 export async function trackPixel(req, res) {
   try {
     const { emailId, recipientEmail } = req.params;
@@ -390,11 +390,11 @@ export async function trackPixel(req, res) {
     .send(pixel);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 // GET /api/track/click/:emailId
 // Link tracking redirect — wraps links so clicks are logged.
 // Query: ?url=<original_url>&email=<recipientEmail>
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 export async function trackClick(req, res) {
   try {
     const { emailId }  = req.params;
