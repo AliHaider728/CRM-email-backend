@@ -5,12 +5,19 @@ const teamMemberSchema = new mongoose.Schema(
     name:             { type: String, required: true },
     email:            { type: String, required: true, unique: true },
     role:             { type: String, default: 'Account Manager' },
-    bccAddress:       { type: String },
-    outlookConnected: { type: Boolean, default: false },
     avatarInitials:   { type: String },
-    emailCount:       { type: Number, default: 0 },
-    clientCount:      { type: Number, default: 0 },
-    lastSyncAt:       { type: Date },
+
+    // ─── BCC & Outlook  
+    bccAddress:            { type: String },
+    outlookConnected:      { type: Boolean, default: false },
+    outlookRefreshToken:   { type: String },    // stored after OAuth flow
+    lastSyncAt:            { type: Date },
+
+    // ─── Counters — FIX: added sentCount + receivedCount (used in seed)  
+    emailCount:    { type: Number, default: 0 },
+    sentCount:     { type: Number, default: 0 },   // FIX: was missing
+    receivedCount: { type: Number, default: 0 },   // FIX: was missing
+    clientCount:   { type: Number, default: 0 },
   },
   { timestamps: true }
 );

@@ -1,91 +1,127 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // controllers/bccController.js
-// Handles inbound BCC email ingestion from external email services.
-// Route: POST /api/bcc/ingest
+// Handles inbound BCC emails sent to activity+<member>@ourcrm.com
 //
-// ── How BCC Tracking Works ────────────────────────────────────────────────────
-// Each team member has a unique BCC address: bcc+<username>@crm.yourdomain.com
-// When they send a client email in Outlook, they add this address as BCC.
-// The email server (SendGrid Inbound Parse / Postmark / Mailgun) POSTs the
-// parsed email payload to this endpoint.
-// We then:
-//   1. Look up the team member from the bccToken in the "to" address
-//   2. Match the recipient email to an existing client record
-//   3. Log the email and create a timeline entry
+// This endpoint is called by your email receiving service (e.g. SendGrid
+// Inbound Parse, Mailgun, or Postmark Inbound).  It:
+//   1. Parses the BCC address to identify the account manager
+//   2. Looks up the correct client via the recipient (To) email
+//   3. Logs the email under that client's timeline
+//   4. Creates a notification for the account manager
+//
+// Route: POST /api/bcc/ingest
 // ─────────────────────────────────────────────────────────────────────────────
 
-import Email         from '../models/Email.js';
-import Client        from '../models/Client.js';
 import TeamMember    from '../models/TeamMember.js';
+import Client        from '../models/Client.js';
+import Email         from '../models/Email.js';
 import TimelineEntry from '../models/TimelineEntry.js';
+import Notification  from '../models/Notification.js';
 
 // ─── POST /api/bcc/ingest ─────────────────────────────────────────────────────
-// Ingests an email forwarded via BCC from an external email service.
-// Body: { bccToken*, subject*, fromEmail*, fromName, toEmail,
-//         body, bodyPreview, sentAt }
 export async function ingestBccEmail(req, res, next) {
   try {
     const {
-      bccToken, subject, fromEmail, fromName,
-      toEmail, body, bodyPreview, sentAt,
+      from,          // sender email e.g. "alice@nhscrm.com"
+      fromName,      // sender display name
+      to,            // primary recipient email (client)
+      toName,        // recipient display name
+      bcc,           // the BCC address e.g. "activity+alice@ourcrm.com"
+      subject,
+      bodyPlain,
+      bodyHtml,
+      attachments = [],
+      outlookMessageId,
     } = req.body;
 
-    // bccToken, subject, and fromEmail are required to process the email
-    if (!bccToken || !subject || !fromEmail)
+    if (!bcc || !from || !subject) {
       return res.status(400).json({
         error: 'validation_error',
-        message: 'bccToken, subject, and fromEmail are required',
+        message: 'bcc, from, and subject are required',
       });
+    }
 
-    // Reconstruct the full BCC address from the token to find the team member
-    const bccAddress = `bcc+${bccToken}@crm.yourdomain.com`;
-    const member     = await TeamMember.findOne({ bccAddress });
+    // 1. Identify account manager from BCC address
+    //    BCC format: activity+<username>@ourcrm.com  OR  bcc+<username>@crm.yourdomain.com
+    const member = await TeamMember.findOne({ bccAddress: bcc });
+    if (!member) {
+      return res.status(404).json({
+        error: 'not_found',
+        message: `No team member found with BCC address: ${bcc}`,
+      });
+    }
 
-    // Try to match the recipient's email address to an existing client
-    const client = toEmail ? await Client.findOne({ email: toEmail }) : null;
+    // 2. Find client by their email address (To field)
+    let client = null;
+    if (to) {
+      client = await Client.findOne({ email: to.toLowerCase() });
+    }
+    // Fallback: try matching the sender against client emails (reply scenario)
+    if (!client && from) {
+      client = await Client.findOne({ email: from.toLowerCase() });
+    }
 
-    // Create the email record — always logged even if client/member not found
+    // 3. Prevent duplicate ingestion for same Outlook message
+    if (outlookMessageId) {
+      const existing = await Email.findOne({ outlookMessageId });
+      if (existing) {
+        return res.json({ success: true, duplicate: true, emailId: existing._id });
+      }
+    }
+
+    // 4. Build preview (first 200 chars of plain text)
+    const bodyPreview = (bodyPlain || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+
+    // 5. Save email
     const email = await Email.create({
       subject,
       direction:          'outbound',
-      fromEmail, fromName,
-      toEmail,
-      body, bodyPreview,
+      fromEmail:          from,
+      fromName:           fromName || from,
+      toEmail:            to,
+      toName:             toName || to,
+      body:               bodyHtml || bodyPlain,
+      bodyPreview,
       clientId:           client?._id,
-      accountManagerId:   member?._id,
-      accountManagerName: member?.name,
-      bccTracked:  true,
-      openCount:   0,
-      clickCount:  0,
-      isRead:      true,
-      attachments: [],
-      sentAt: sentAt ? new Date(sentAt) : new Date(),
+      accountManagerId:   member._id,
+      accountManagerName: member.name,
+      bccTracked:         true,
+      syncMethod:         'bcc',
+      outlookMessageId,
+      attachments:        attachments.map((a) => a.filename || a),
+      isRead:             true,
+      sentAt:             new Date(),
     });
 
-    // If we matched a client: update their email count and create a timeline entry
+    // 6. Mirror to timeline
     if (client) {
-      await Client.findByIdAndUpdate(client._id, {
-        $inc: { emailCount: 1 },
-        lastContactedAt: new Date(),
-      });
-
       await TimelineEntry.create({
         type:               'email_sent',
         clientId:           client._id,
         emailId:            email._id,
         subject,
-        preview:            bodyPreview || body?.slice(0, 120),
-        fromName, fromEmail,
-        accountManagerId:   member?._id,
-        accountManagerName: member?.name,
-        isRead:         true,
-        openCount:      0,
-        clickCount:     0,
-        hasAttachments: false,
-        occurredAt:     email.sentAt,
+        preview:            bodyPreview,
+        fromName:           fromName || from,
+        fromEmail:          from,
+        accountManagerId:   member._id,
+        accountManagerName: member.name,
+        syncMethod:         'bcc',
+        isRead:             true,
+        occurredAt:         new Date(),
+      });
+
+      // 7. Update client counters
+      await Client.findByIdAndUpdate(client._id, {
+        $inc: { emailCount: 1 },
+        $set: { lastContactedAt: new Date() },
       });
     }
 
-    res.status(201).json({ success: true, email });
+    // 8. Update team member sent counter
+    await TeamMember.findByIdAndUpdate(member._id, {
+      $inc: { emailCount: 1, sentCount: 1 },
+    });
+
+    res.status(201).json({ success: true, emailId: email._id, clientFound: !!client });
   } catch (err) { next(err); }
 }

@@ -16,4 +16,7 @@ const clientSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+clientSchema.index({ pcnNumber: 1 });
+clientSchema.index({ accountManagerId: 1 });
+
 export default mongoose.model('Client', clientSchema);
